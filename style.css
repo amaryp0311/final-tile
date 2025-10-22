@@ -1,0 +1,274 @@
+body {
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f0f0f0;
+}
+
+#game-container {
+    display: flex;
+    gap: 20px;
+}
+
+#game-board {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    width: 600px;
+    height: 600px;
+    border: 2px solid black;
+    background-color: #fff;
+}
+
+.grid-cell {
+    border: 1px solid #ccc;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.player-token {
+    width: 70%;
+    height: 70%;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+#ui-panel {
+    padding: 20px;
+    border: 2px solid black;
+    background-color: #fff;
+    width: 200px;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    font-size: 16px;
+}
+
+/* เพิ่มโค้ดนี้ท้ายไฟล์ style.css */
+.move-controls {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.move-controls > div {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+}
+
+.move-controls button {
+    width: 80px;
+    height: 60px;
+    padding: 5px;
+}
+
+/* --- เพิ่มโค้ดนี้ท้ายไฟล์ style.css --- */
+
+/* สไตล์สำหรับหน้าต่าง Modal ที่ซ่อนอยู่ */
+.modal-hidden {
+    display: none; 
+}
+
+/* สไตล์สำหรับหน้าต่าง Modal ที่แสดงผล */
+.modal-visible {
+    display: flex; /* ทำให้แสดงผล */
+    position: fixed; /* ลอยทับทุกอย่าง */
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6); /* พื้นหลังสีดำโปร่งแสง */
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 10px;
+    position: relative;
+}
+
+.close-btn {
+    color: #aaa;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-btn:hover {
+    color: black;
+}
+
+#inventory-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+#inventory-list li {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#inventory-list button {
+    width: auto;
+    padding: 5px 10px;
+    font-size: 14px;
+}
+
+/* สไตล์สำหรับสถานที่ที่ค้นหาไปแล้ว */
+.looted {
+    opacity: 0.4;
+}
+
+/* --- เพิ่มโค้ดนี้ท้ายไฟล์ style.css --- */
+#start-screen {
+    text-align: center;
+    background-color: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.setup-controls {
+    margin: 20px 0;
+    font-size: 18px;
+}
+#bot-count-select {
+    font-size: 18px;
+    padding: 5px;
+    margin-left: 10px;
+}
+#start-game-btn {
+    font-size: 20px;
+    padding: 10px 30px;
+    cursor: pointer;
+}
+
+/* --- เพิ่มโค้ดนี้ท้ายไฟล์ style.css --- */
+
+/* อัปเกรดสไตล์ของตัวละคร */
+.player-token {
+    /* ... โค้ดเก่าเหมือนเดิม ... */
+
+    /* เพิ่มสไตล์เหล่านี้เข้าไป */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2em; /* ปรับขนาดตัวเลขตามความเหมาะสม */
+    text-shadow: 1px 1px 2px black; /* เพิ่มเงาให้ตัวเลขดูชัดขึ้น */
+}
+
+/* สไตล์สำหรับตัวบอกเทิร์น */
+#turn-indicator {
+    margin-top: 0;
+    padding: 5px;
+    border-radius: 5px;
+    text-align: center;
+    color: white;
+    background-color: #555; /* สีพื้นหลังเริ่มต้น */
+    transition: background-color 0.3s; /* ทำให้สีเปลี่ยนอย่างนุ่มนวล */
+}
+
+#weapon-selection-list button {
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+#dice-roll-result {
+    margin-top: 15px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+/* --- เพิ่มโค้ดนี้ท้ายไฟล์ style.css --- */
+#game-over-modal .modal-content {
+    text-align: center;
+}
+
+#rank-display {
+    font-size: 24px;
+    margin: 20px 0;
+}
+
+#restart-btn {
+    font-size: 18px;
+    padding: 10px 25px;
+    width: auto;
+}
+
+/* --- เพิ่มโค้ดนี้ท้ายไฟล์ style.css --- */
+
+/* สไตล์สำหรับกำแพงที่หนาและมองเห็นได้ชัด */
+.wall-top {
+    border-top: 4px solid #5C4033; /* สีน้ำตาลเข้มเหมือนอิฐ */
+}
+.wall-bottom {
+    border-bottom: 4px solid #5C4033;
+}
+.wall-left {
+    border-left: 4px solid #5C4033;
+}
+.wall-right {
+    border-right: 4px solid #5C4033;
+}
+
+/* --- เพิ่มโค้ดนี้ท้ายไฟล์ style.css --- */
+
+#win-modal .modal-content {
+    text-align: center;
+}
+
+#win-modal h2 {
+    color: #5cb85c; /* สีเขียวสำหรับชัยชนะ */
+    margin-bottom: 15px;
+}
+
+#win-restart-btn {
+    font-size: 18px;
+    padding: 10px 25px;
+    width: auto;
+}
+
+/* --- เพิ่มโค้dนี้ท้ายไฟล์ style.css --- */
+#battle-modal .modal-content {
+    text-align: center;
+}
+#battle-log {
+    min-height: 50px;
+    background-color: #f2f2f2;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+}
+#attacker-controls, #defender-controls {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+#battle-weapon-list button, #defender-controls button {
+    width: auto;
+    padding: 10px 15px;
+    margin: 5px;
+}

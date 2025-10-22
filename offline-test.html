@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline Game Test</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Offline Test Mode</h1>
+    <div id="start-screen">
+        <h1>Final Tile</h1>
+        <div class="setup-controls">
+            <label for="bot-count-select">เลือกจำนวนบอท:</label>
+            <select id="bot-count-select">
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+            </select>
+        </div>
+        <button id="start-game-btn">เริ่มเกม!</button>
+    </div>
+
+    <div id="game-container" style="display: none;">
+        <div id="game-board"></div>
+        <div id="ui-panel">
+            <h2>สถานะผู้เล่น</h2>
+            <h3 id="turn-indicator">Turn: ???</h3>
+            <p>HP: <span id="player-hp">10</span></p>
+            <p>Actions Left: <span id="actions-left">3</span></p>
+            <hr>
+            <h2>การกระทำ</h2>
+            <div class="move-controls">
+                <button id="move-up-btn">▲</button>
+                <div>
+                    <button id="move-left-btn">◄</button>
+                    <button id="move-right-btn">►</button>
+                </div>
+                <button id="move-down-btn">▼</button>
+            </div>
+            <button id="search-btn">🔍 ค้นหา</button>
+            <button id="inventory-btn">🎒 เปิดคลัง</button>
+        </div>
+    </div>
+
+    <div id="inventory-modal" class="modal-hidden">
+        <div class="modal-content">
+            <span id="close-inventory-btn" class="close-btn">&times;</span>
+            <h2>คลังเก็บของ</h2>
+            <ul id="inventory-list"></ul>
+        </div>
+    </div>
+
+    <div id="attack-modal" class="modal-hidden">
+        <div class="modal-content">
+            <span id="close-attack-modal-btn" class="close-btn">&times;</span>
+            <h2>โจมตี <span id="target-name"></span></h2>
+            <p>เลือกอาวุธที่จะใช้:</p>
+            <ul id="weapon-selection-list"></ul>
+            <div id="dice-roll-result" style="display: none;">
+                <h3>ผลลัพธ์</h3>
+                <p>ทอยเต๋าได้: <b id="dice-result">?</b></p>
+                <p id="attack-outcome">ผลการโจมตี...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-over-modal" class="modal-hidden">
+        <div class="modal-content">
+            <h2>Game Over!</h2>
+            <p id="rank-display">คุณได้อันดับที่: #?</p>
+            <button id="restart-btn">กลับไปหน้าหลัก</button>
+        </div>
+    </div>
+
+    <div id="win-modal" class="modal-hidden">
+        <div class="modal-content">
+            <h2>🎉 ยินดีด้วย! คุณคือผู้ชนะ! 🎉</h2>
+            <p>คุณเป็นผู้รอดชีวิตคนสุดท้ายในดินแดนอันโหดร้ายนี้</p>
+            <button id="win-restart-btn">กลับไปหน้าหลัก</button>
+        </div>
+    </div>
+
+    <div id="battle-modal" class="modal-hidden">
+        <div class="modal-content">
+            <h2 id="battle-title">⚔️ BATTLE STAGE ⚔️</h2>
+            <div id="battle-log">
+                <p>กำลังตัดสินผู้เริ่มโจมตีก่อน...</p>
+            </div>
+            <hr>
+            <div id="attacker-controls" style="display: none;">
+                <h3>ตาของ: <span id="attacker-name"></span> (ผู้โจมตี)</h3>
+                <p>เลือกอาวุธเพื่อโจมตี:</p>
+                <div id="battle-weapon-list"></div>
+            </div>
+            <div id="defender-controls" style="display: none;">
+                <h3>ตาของ: <span id="defender-name"></span> (ผู้ป้องกัน)</h3>
+                <p>เลือกการกระทำ:</p>
+                <button id="defend-btn">ป้องกัน</button>
+                <button id="escape-btn">พยายามหนี</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="offline-game.js"></script>
+</body>
+</html>
