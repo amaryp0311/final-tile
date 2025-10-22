@@ -1,5 +1,5 @@
 // ==========================================================
-//  ไฟล์ offline-game.js (เวอร์ชัน Final - แก้ไขคลังเก็บของ)
+//  ไฟล์ offline-game.js 
 // ==========================================================
 
 // --- 1. ค่าคงที่และสถานะเริ่มต้นของเกม ---
@@ -455,27 +455,22 @@ async function runBotTurn(botId) {
     nextTurn();
 }
 
+// **การแก้ไขที่ 1: ยกเครื่อง initiateBattleStage ให้เป็น "สวิตช์"**
 function initiateBattleStage(initiatorId, defenderId) {
     console.log(`%c⚔️ BATTLE STAGE started between ${initiatorId} and ${defenderId}`, 'color: orange; font-weight: bold;');
-    battleState = {
-        isActive: true,
-        participants: [initiatorId, defenderId],
-        log: []
-    };
+    battleState = { isActive: true, participants: [initiatorId, defenderId], log: [] };
     document.querySelectorAll('#ui-panel button').forEach(btn => btn.disabled = true);
     
-    // เช็คว่าเป็น Bot vs Bot หรือไม่
     const isBotVsBot = initiatorId !== HUMAN_PLAYER_ID && defenderId !== HUMAN_PLAYER_ID;
 
     if (isBotVsBot) {
-        // ถ้าใช่ ให้รันโหมดอัตโนมัติ
         runAutomatedBattle(initiatorId, defenderId);
     } else {
-        // ถ้ามีผู้เล่นเกี่ยวข้อง ให้รันโหมดปกติ
         runInteractiveBattle(initiatorId, defenderId);
     }
 }
 
+// **การแก้ไขที่ 2: สร้างฟังก์ชันใหม่สำหรับ Bot vs Bot**
 async function runAutomatedBattle(p1Id, p2Id) {
     battleModal.classList.remove('modal-hidden');
     battleModal.classList.add('modal-visible');
@@ -483,77 +478,60 @@ async function runAutomatedBattle(p1Id, p2Id) {
     defenderControls.style.display = 'none';
     updateBattleLog(`การต่อสู้ระหว่าง ${gameState.players[p1Id].name} และ ${gameState.players[p2Id].name} เริ่มขึ้นแล้ว!`);
     await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // ตัดสินผู้เริ่มโจมตี
     let attackerId, defenderId;
     if (Math.random() >= 0.5) { [attackerId, defenderId] = [p1Id, p2Id]; }
     else { [attackerId, defenderId] = [p2Id, p1Id]; }
-
-    // วนลูปการต่อสู้จนกว่าจะรู้ผล
     while (gameState.players[attackerId].status === 'active' && gameState.players[defenderId].status === 'active') {
         const attacker = gameState.players[attackerId];
         const defender = gameState.players[defenderId];
-        
-        // 1. Attacker AI: เลือกอาวุธและโจมตี
         const weapons = attacker.inventory.filter(item => item.type.includes('Weapon'));
         const weapon = weapons.length > 0 ? weapons[0] : { name: 'หมัด', damage: 1 };
         const attackRoll = Math.floor(Math.random() * 6) + 1;
         let damage = (attackRoll === 6) ? weapon.damage * 2 : weapon.damage;
         updateBattleLog(`${attacker.name} ใช้ ${weapon.name} และทอยได้ ${attackRoll}.`);
         await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // 2. Defender AI: ตัดสินใจว่าจะหนีหรือป้องกัน
         let choice = (defender.hp < 7) ? 'escape' : 'defend';
         const defendRoll = Math.floor(Math.random() * 6) + 1;
-        
         if (choice === 'escape') {
             updateBattleLog(`${defender.name} พยายามหนี และทอยได้ ${defendRoll}.`);
             await new Promise(resolve => setTimeout(resolve, 1500));
             if (defendRoll === 6) {
                 updateBattleLog("หนีสำเร็จ!");
                 endBattle(defenderId, 'escaped');
-                return; // จบการต่อสู้
+                return;
             } else {
                 updateBattleLog("หนีล้มเหลว!");
             }
-        } else { // 'defend'
+        } else {
             updateBattleLog(`${defender.name} เลือกป้องกัน และทอยได้ ${defendRoll}.`);
             await new Promise(resolve => setTimeout(resolve, 1500));
             if (defendRoll === 6) {
-                damage = 0;
-                updateBattleLog("Perfect Dodge! ไม่ได้รับความเสียหาย!");
+                damage = 0; updateBattleLog("Perfect Dodge! ไม่ได้รับความเสียหาย!");
             } else if (defendRoll > attackRoll) {
-                damage = Math.ceil(damage / 2);
-                updateBattleLog(`ป้องกันสำเร็จ! ลดความเสียหายเหลือ ${damage} ดาเมจ.`);
+                damage = Math.ceil(damage / 2); updateBattleLog(`ป้องกันสำเร็จ! ลดความเสียหายเหลือ ${damage} ดาเมจ.`);
             } else {
                 updateBattleLog("ป้องกันล้มเหลว!");
             }
         }
-        
-        // 3. คำนวณความเสียหาย
         defender.hp -= damage;
         if (defender.hp < 0) defender.hp = 0;
         updateBattleLog(`${defender.name} ได้รับ ${damage} ดาเมจ. HP เหลือ ${defender.hp}`);
         redrawScreen();
         await new Promise(resolve => setTimeout(resolve, 1500));
-
         if (defender.hp <= 0) {
             defender.status = 'dead';
             updateBattleLog(`${defender.name} พ่ายแพ้แล้ว!`);
-            break; // จบลูป
+            break;
         }
-        
-        // 4. สลับบทบาท
         [attackerId, defenderId] = [defenderId, attackerId];
         updateBattleLog("--- สลับบทบาท ---");
         await new Promise(resolve => setTimeout(resolve, 1500));
     }
-    
-    // จบการต่อสู้
     const winnerId = (gameState.players[p1Id].status === 'active') ? p1Id : p2Id;
     endBattle(winnerId, 'won');
 }
 
+// **การแก้ไขที่ 3: เปลี่ยนชื่อฟังก์ชันเดิมเป็น Interactive**
 function runInteractiveBattle(initiatorId, defenderId) {
     battleModal.classList.remove('modal-hidden');
     battleModal.classList.add('modal-visible');
@@ -579,34 +557,50 @@ function runBattleRound() {
     battleState.attackerRoll = null;
     battleState.defenderRoll = null;
     battleState.defenderChoice = null;
-    attackerName.textContent = gameState.players[battleState.currentAttacker].name;
-    defenderControls.style.display = 'none';
-    attackerControls.style.display = 'block';
     const attacker = gameState.players[battleState.currentAttacker];
-    battleWeaponList.innerHTML = '';
-    const weapons = attacker.inventory.filter(item => item.type.includes('Weapon'));
-    if (weapons.length > 0) {
-        weapons.forEach(weapon => {
-            const button = document.createElement('button');
-            button.textContent = `${weapon.name} (${weapon.damage} DMG)`;
-            button.onclick = () => handleBattleAttack(weapon);
-            battleWeaponList.appendChild(button);
-        });
+    const defender = gameState.players[battleState.currentDefender];
+    
+    // **การแก้ไข: เช็คว่าเป็นตาบอทหรือผู้เล่น**
+    if (battleState.currentAttacker !== HUMAN_PLAYER_ID) {
+        // ถ้าเป็นตาบอทโจมตี
+        attackerControls.style.display = 'none';
+        defenderControls.style.display = 'none';
+        
+        const weapons = attacker.inventory.filter(item => item.type.includes('Weapon'));
+        const weapon = weapons.length > 0 ? weapons[0] : { name: 'หมัด', damage: 1 };
+        handleBattleAttack(weapon); // เรียกโจมตีทันที
     } else {
-        // ถ้าไม่มีอาวุธ ให้สร้างปุ่มหมัด
-        const button = document.createElement('button');
-        button.textContent = 'ใช้หมัด (1 DMG)';
-        button.onclick = () => handleBattleAttack({ name: 'หมัด', damage: 1 });
-        battleWeaponList.appendChild(button);
+        // ถ้าเป็นตาผู้เล่นโจมตี
+        attackerName.textContent = attacker.name;
+        defenderControls.style.display = 'none';
+        attackerControls.style.display = 'block';
+        battleWeaponList.innerHTML = '';
+        const weapons = attacker.inventory.filter(item => item.type.includes('Weapon'));
+        if (weapons.length > 0) {
+            weapons.forEach(weapon => {
+                const button = document.createElement('button');
+                button.textContent = `${weapon.name} (${weapon.damage} DMG)`;
+                button.onclick = () => handleBattleAttack(weapon);
+                battleWeaponList.appendChild(button);
+            });
+        } else {
+            const button = document.createElement('button');
+            button.textContent = 'ใช้หมัด (1 DMG)';
+            button.onclick = () => handleBattleAttack({ name: 'หมัด', damage: 1 });
+            battleWeaponList.appendChild(button);
+        }
     }
 }
 
 function handleBattleAttack(weapon) {
-    attackerControls.style.display = 'none';
+    if(battleState.currentAttacker !== HUMAN_PLAYER_ID) {
+        // ซ่อน UI ผู้เล่น ถ้าบอทกำลังโจมตี
+        attackerControls.style.display = 'none';
+    }
     const roll = Math.floor(Math.random() * 6) + 1;
     battleState.attackerRoll = roll;
     battleState.weaponUsed = weapon;
-    let damage = weapon.damage || 1; // ใช้ damage ของอาวุธ หรือ 1 สำหรับหมัด
+    let damage = weapon.damage || 1;
     let message = `${gameState.players[battleState.currentAttacker].name} ใช้ ${weapon.name} และทอยได้ ${roll}.`;
     if (roll === 6) {
         damage *= 2;
@@ -614,8 +608,18 @@ function handleBattleAttack(weapon) {
     }
     battleState.potentialDamage = damage;
     updateBattleLog(message);
-    defenderName.textContent = gameState.players[battleState.currentDefender].name;
-    defenderControls.style.display = 'block';
+    
+    // **การแก้ไข: เช็คว่าเป็นตาบอทหรือผู้เล่น**
+    if(battleState.currentDefender !== HUMAN_PLAYER_ID) {
+        // ถ้าบอทเป็นฝ่ายป้องกัน ให้มันตัดสินใจเอง
+        defenderControls.style.display = 'none';
+        const choice = (gameState.players[battleState.currentDefender].hp < 7) ? 'escape' : 'defend';
+        setTimeout(() => handleDefenderChoice(choice), 1500); // หน่วงเวลาให้ดูเหมือนคิด
+    } else {
+        // ถ้าผู้เล่นเป็นฝ่ายป้องกัน ให้แสดงปุ่ม
+        defenderName.textContent = gameState.players[battleState.currentDefender].name;
+        defenderControls.style.display = 'block';
+    }
 }
 
 defendBtn.onclick = () => handleDefenderChoice('defend');
@@ -675,27 +679,37 @@ function handleDefenderChoice(choice) {
 }
 
 function endBattle(winnerId, reason) {
-    battleState.isActive = false;
-    battleModal.classList.remove('modal-visible');
-    battleModal.classList.add('modal-hidden');
-    document.querySelectorAll('#ui-panel button').forEach(btn => btn.disabled = false);
-    
-    if (reason === 'escaped') {
-        // หาช่องว่างรอบๆ ให้ผู้เล่นที่หนีไปอยู่
-        const escaper = gameState.players[winnerId]; // ในกรณีนี้ winnerId คือคนที่หนี
-        const { row, col } = escaper.position;
-        const directions = [{r:-1,c:0},{r:1,c:0},{r:0,c:-1},{r:0,c:1}];
-        for(const dir of directions) {
-            const newPos = { row: row + dir.r, col: col + dir.c };
-            // (ต้องเพิ่มโค้ดเช็คกำแพงและขอบเขตตรงนี้)
-            escaper.position = newPos;
-            break;
+    setTimeout(() => {
+        battleState.isActive = false;
+        battleModal.classList.remove('modal-visible');
+        battleModal.classList.add('modal-hidden');
+        document.querySelectorAll('#ui-panel button').forEach(btn => btn.disabled = false);
+        if (reason === 'escaped') {
+            const escaper = gameState.players[winnerId];
+            const { row, col } = escaper.position;
+            const directions = [{ r: -1, c: 0 }, { r: 1, c: 0 }, { r: 0, c: -1 }, { r: 0, c: 1 }];
+            for (const dir of directions) {
+                const newPos = { row: row + dir.r, col: col + dir.c };
+                const walls = gameState.walls[`${row}-${col}`];
+                if (newPos.row >= 0 && newPos.row < 9 && newPos.col >= 0 && newPos.col < 9) {
+                    let wallBlock = false;
+                    if(dir.r === -1 && walls && walls.top) wallBlock = true;
+                    if(dir.r === 1 && walls && walls.bottom) wallBlock = true;
+                    if(dir.c === -1 && walls && walls.left) wallBlock = true;
+                    if(dir.c === 1 && walls && walls.right) wallBlock = true;
+                    if(!wallBlock) {
+                        escaper.position = newPos;
+                        break;
+                    }
+                }
+            }
         }
-    }
-    
-    redrawScreen();
-    // เริ่มเทิร์นของผู้เล่นที่ยัง Active อยู่ตามลำดับ
-    nextTurn();
+        redrawScreen();
+        // **การแก้ไข: เช็คว่าผู้เล่นตายหรือยัง ก่อนเริ่มเทิร์นต่อไป**
+        if (gameState.players[HUMAN_PLAYER_ID].status === 'active') {
+            setTimeout(nextTurn, 500);
+        }
+    }, 2000);
 }
 
 function updateBattleLog(message) {
