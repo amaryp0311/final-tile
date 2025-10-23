@@ -355,7 +355,7 @@ function useItem(itemIndex) {
     const myPlayer = gameState.players[HUMAN_PLAYER_ID];
     const item = myPlayer.inventory[itemIndex];
     if (item && item.type === 'Food') {
-        myPlayer.hp = Math.min(15, myPlayer.hp + item.hp);
+        myPlayer.hp = myPlayer.hp + item.hp;
         addLogMessage(`🍔 ${myPlayer.name} กิน ${item.name} (+${item.hp} HP)`);
         myPlayer.inventory.splice(itemIndex, 1);
         drawInventory();
