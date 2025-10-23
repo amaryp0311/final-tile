@@ -11,7 +11,7 @@ const lootTable = [
 const BOT_COLORS = ['#f0ad4e', '#5bc0de', '#5cb85c', '#d9534f', '#428bca', '#777', '#333'];
 let gameState = { boardState: {}, players: {}, turnOrder: [], currentTurnIndex: 0, walls: {} };
 const HUMAN_PLAYER_ID = "player1";
-let battleState = { isActive: false }; // <-- สถานะใหม่สำหรับ Battle Stage
+let battleState = { isActive: false };
 
 // --- 2. ดึง Element จาก HTML ---
 const startScreen = document.getElementById('start-screen');
@@ -53,6 +53,44 @@ const defenderControls = document.getElementById('defender-controls');
 const defenderName = document.getElementById('defender-name');
 const defendBtn = document.getElementById('defend-btn');
 const escapeBtn = document.getElementById('escape-btn');
+const gameLog = document.getElementById('game-log');
+const damagePopup = document.getElementById('damage-popup');
+const popupAttackerName = document.getElementById('popup-attacker-name');
+const popupDamageAmount = document.getElementById('popup-damage-amount');
+const skipBattleBtn = document.getElementById('skip-battle-btn');
+
+// --- ฟังก์ชัน Helper ---
+function addLogMessage(message) {
+    const li = document.createElement('li');
+    li.innerHTML = message;
+    gameLog.prepend(li);
+    if (gameLog.children.length > 20) { gameLog.lastChild.remove(); }
+}
+
+function showDamagePopup(attackerName, damage) {
+    popupAttackerName.textContent = attackerName;
+    popupDamageAmount.textContent = damage;
+    damagePopup.classList.remove('popup-hidden');
+    damagePopup.classList.add('show');
+    setTimeout(() => {
+        damagePopup.classList.remove('show');
+        setTimeout(() => { damagePopup.classList.add('popup-hidden'); }, 500);
+    }, 2500);
+}
+
+function isWallBetween(pos1, pos2) {
+    const key1 = `${pos1.row}-${pos1.col}`;
+    const walls1 = gameState.walls[key1];
+    if (!walls1) return false;
+    if (pos1.row === pos2.row) {
+        if (pos1.col < pos2.col && walls1.right) return true;
+        if (pos1.col > pos2.col && walls1.left) return true;
+    } else if (pos1.col === pos2.col) {
+        if (pos1.row < pos2.row && walls1.bottom) return true;
+        if (pos1.row > pos2.row && walls1.top) return true;
+    }
+    return false;
+}
 
 // --- 3. ฟังก์ชันสำหรับ "วาด" หน้าจอ ---
 function redrawScreen() {
@@ -117,15 +155,21 @@ function addCellClickListeners() {
 
 function onCellClick(row, col) {
     const myTurn = gameState.turnOrder[gameState.currentTurnIndex] === HUMAN_PLAYER_ID;
-    if (!myTurn) return;
+    if (!myTurn || battleState.isActive) return;
     for (const targetId in gameState.players) {
         if (targetId === HUMAN_PLAYER_ID) continue;
         const target = gameState.players[targetId];
         if (target.status === 'active' && target.position.row === row && target.position.col === col) {
-            const myPos = gameState.players[HUMAN_PLAYER_ID].position;
-            const distance = Math.abs(myPos.row - target.position.row) + Math.abs(myPos.col - target.position.col);
+            const myPlayer = gameState.players[HUMAN_PLAYER_ID];
+            const myPos = myPlayer.position;
+            const targetPos = target.position;
+            const distance = Math.abs(myPos.row - targetPos.row) + Math.abs(myPos.col - targetPos.col);
             if (distance === 1) {
-                openAttackModal(targetId);
+                if (isWallBetween(myPos, targetPos)) {
+                    alert("มีกำแพงขวางอยู่ โจมตีไม่ได้!");
+                } else {
+                    openAttackModal(targetId);
+                }
             } else {
                 alert("เป้าหมายอยู่ไกลเกินไป!");
             }
@@ -174,25 +218,22 @@ function executeAttack(attackerId, targetId, weapon) {
     }
     if (roll >= weapon.hitRoll) {
         target.hp -= weapon.damage;
-        const message = `โจมตีสำเร็จ! ${attacker.name} โจมตี ${target.name} ได้รับ ${weapon.damage} ดาเมจ!`;
-        if (attackerId === HUMAN_PLAYER_ID) attackOutcomeP.textContent = message;
-        console.log(`%c${message}`, 'color: red');
+        addLogMessage(`💥 ${attacker.name} โจมตี ${target.name} ด้วย ${weapon.name} สำเร็จ! (-${weapon.damage} HP)`);
+        if (targetId === HUMAN_PLAYER_ID) {
+            showDamagePopup(attacker.name, weapon.damage);
+        }
         if (target.hp <= 0) {
             target.hp = 0;
             target.status = 'dead';
-            const deadMessage = `${target.name} พ่ายแพ้แล้ว!`;
-            if (attackerId === HUMAN_PLAYER_ID) attackOutcomeP.textContent += ` ${deadMessage}`;
-            console.log(`%c${deadMessage}`, 'color: red; font-weight: bold;');
+            addLogMessage(`☠️ ${target.name} พ่ายแพ้แล้ว!`);
             if (targetId === HUMAN_PLAYER_ID) {
                 setTimeout(gameOver, 1500);
             }
         }
     } else {
-        const missMessage = 'โจมตีพลาด!';
-        if (attackerId === HUMAN_PLAYER_ID) attackOutcomeP.textContent = missMessage;
-        console.log(`%c${attacker.name} โจมตี ${target.name} พลาด!`, 'color: gray');
+        addLogMessage(`💨 ${attacker.name} โจมตี ${target.name} ด้วย ${weapon.name} พลาด!`);
+        if (attackerId === HUMAN_PLAYER_ID) attackOutcomeP.textContent = 'โจมตีพลาด!';
     }
-
     if (target.hp <= 0 && attackerId === HUMAN_PLAYER_ID) {
         const activePlayers = gameState.turnOrder.filter(id => gameState.players[id].status === 'active');
         if (activePlayers.length === 1 && activePlayers[0] === HUMAN_PLAYER_ID) {
@@ -200,7 +241,6 @@ function executeAttack(attackerId, targetId, weapon) {
              return true;
         }
     }
-
     if (attackerId === HUMAN_PLAYER_ID && attacker.actionsLeft <= 0) {
         setTimeout(nextTurn, 2000);
     }
@@ -208,7 +248,6 @@ function executeAttack(attackerId, targetId, weapon) {
     return true;
 }
 
-// **การแก้ไข: นำโค้ดคำนวณทิศทางกลับเข้ามา**
 function movePlayer(playerId, direction) {
     const player = gameState.players[playerId];
     if (player.actionsLeft <= 0) {
@@ -225,6 +264,7 @@ function movePlayer(playerId, direction) {
     else if (direction === 'right' && newPosition.col < 8 && (!currentWalls || !currentWalls.right)) { newPosition.col += 1; moved = true; }
 
     if (moved) {
+        addLogMessage(`👣 ${player.name} เดินไปทาง ${direction}`);
         for (const otherPlayerId in gameState.players) {
             if (otherPlayerId === playerId || gameState.players[otherPlayerId].status !== 'active') continue;
             const otherPlayer = gameState.players[otherPlayerId];
@@ -258,8 +298,7 @@ function handleSearch(playerId) {
     player.searchedThisTurnKey = currentPosKey;
     const foundItem = lootTable[Math.floor(Math.random() * lootTable.length)];
     player.inventory.push(foundItem);
-    if (playerId === HUMAN_PLAYER_ID) alert(`คุณค้นพบ: ${foundItem.name}!`);
-    else console.log(`${player.name} ค้นพบ ${foundItem.name}`);
+    addLogMessage(`🔍 ${player.name} ค้นพบ ${foundItem.name}!`);
     if (player.actionsLeft <= 0 && playerId === HUMAN_PLAYER_ID) {
         setTimeout(nextTurn, 500);
     }
@@ -267,7 +306,6 @@ function handleSearch(playerId) {
     return true;
 }
 
-// **การแก้ไข: ยกเครื่องฟังก์ชันคลังทั้งหมด**
 function toggleInventory() {
     const myPlayer = gameState.players[HUMAN_PLAYER_ID];
     if (myPlayer.actionsLeft <= 0 && inventoryModal.classList.contains('modal-hidden')) {
@@ -284,20 +322,28 @@ function toggleInventory() {
     }
 }
 
+// **การแก้ไขที่ 1: สร้างฟังก์ชันใหม่สำหรับ Battle Inventory**
+function toggleInventoryBattle() {
+    if (inventoryModal.classList.contains('modal-hidden')) {
+        drawInventory();
+        inventoryModal.classList.remove('modal-hidden');
+        inventoryModal.classList.add('modal-visible');
+    } else {
+        inventoryModal.classList.remove('modal-visible');
+        inventoryModal.classList.add('modal-hidden');
+    }
+}
+
 function drawInventory() {
     inventoryList.innerHTML = '';
     const myInventory = gameState.players[HUMAN_PLAYER_ID].inventory;
-    if (myInventory.length === 0) {
-        inventoryList.innerHTML = '<li>ไม่มีไอเท็มในคลัง</li>';
-        return;
-    }
+    if (myInventory.length === 0) { inventoryList.innerHTML = '<li>ไม่มีไอเท็มในคลัง</li>'; return; }
     myInventory.forEach((item, index) => {
         const li = document.createElement('li');
         li.textContent = `${item.name} (${item.type === 'Food' ? `+${item.hp} HP` : `${item.damage} DMG`})`;
         if (item.type === 'Food') {
             const useButton = document.createElement('button');
             useButton.textContent = 'กิน';
-            // ส่ง index ของไอเท็มเข้าไปในฟังก์ชัน useItem
             useButton.onclick = () => useItem(index);
             li.appendChild(useButton);
         }
@@ -307,21 +353,17 @@ function drawInventory() {
 
 function useItem(itemIndex) {
     const myPlayer = gameState.players[HUMAN_PLAYER_ID];
-    // หาไอเท็มจาก index ที่ได้รับมา
     const item = myPlayer.inventory[itemIndex];
     if (item && item.type === 'Food') {
-        myPlayer.hp = myPlayer.hp + item.hp;
-        alert(`คุณกิน ${item.name} และฟื้นฟู ${item.hp} HP!`);
-        // ลบไอเท็มออกจาก inventory ด้วย index
+        myPlayer.hp = Math.min(15, myPlayer.hp + item.hp);
+        addLogMessage(`🍔 ${myPlayer.name} กิน ${item.name} (+${item.hp} HP)`);
         myPlayer.inventory.splice(itemIndex, 1);
-        
-        // วาดคลังและหน้าจอใหม่ทั้งหมด
         drawInventory();
         redrawScreen();
     }
 }
 
-// --- 5. ระบบเทิร์น, Game Over, และ AI ---
+// --- 5. ระบบเทิร์น, Battle Stage, Game Over, และ AI ---
 function gameOver() {
     const activePlayers = gameState.turnOrder.filter(id => gameState.players[id].status === 'active');
     const myRank = activePlayers.length + 1;
@@ -340,17 +382,11 @@ function winGame() {
 function nextTurn() {
     if (battleState.isActive) return;
     const activePlayers = gameState.turnOrder.filter(id => gameState.players[id].status === 'active');
-    if (activePlayers.length === 1 && activePlayers[0] === HUMAN_PLAYER_ID) {
-        winGame();
-        return;
-    }
+    if (activePlayers.length === 1 && activePlayers[0] === HUMAN_PLAYER_ID) { winGame(); return; }
     if (activePlayers.length <= 1) {
         const winner = activePlayers.length === 1 ? gameState.players[activePlayers[0]] : null;
-        if (winner && winner.id !== HUMAN_PLAYER_ID) {
-            alert(`เกมจบแล้ว! ${winner.name} คือผู้ชนะ!`);
-        } else if (!winner) {
-            alert('เกมจบแล้ว! ไม่มีผู้ชนะ!');
-        }
+        if (winner && winner.id !== HUMAN_PLAYER_ID) { alert(`เกมจบแล้ว! ${winner.name} คือผู้ชนะ!`); }
+        else if (!winner) { alert('เกมจบแล้ว! ไม่มีผู้ชนะ!'); }
         document.querySelectorAll('#ui-panel button').forEach(btn => btn.disabled = true);
         return;
     }
@@ -365,7 +401,7 @@ function nextTurn() {
     nextPlayer.searchedThisTurnKey = null;
     turnIndicator.textContent = `Turn: ${nextPlayer.name}`;
     turnIndicator.style.backgroundColor = nextPlayer.color;
-    console.log(`%c--- Turn Start: ${nextPlayer.name} ---`, 'color: green; font-weight: bold;');
+    addLogMessage(`▶---- ถึงตาของ <strong>${nextPlayer.name}</strong>----▶`);
     if (nextPlayerId === HUMAN_PLAYER_ID) {
         redrawScreen();
     } else {
@@ -402,14 +438,17 @@ async function runBotTurn(botId) {
         if (bot.hp < 10) {
             if (executeBotHeal(botId)) { actionTaken = true; }
         }
+        // AI Logic 2: โจมตีถ้าทำได้ (อัปเกรด)
         if (!actionTaken) {
             const rangedWeapons = bot.inventory.filter(item => item.type === 'RangedWeapon');
             if (rangedWeapons.length > 0) {
                 for (const targetId in gameState.players) {
                     if (targetId === botId || gameState.players[targetId].status !== 'active') continue;
-                    const targetPos = gameState.players[targetId].position;
-                    const distance = Math.abs(bot.position.row - targetPos.row) + Math.abs(bot.position.col - targetPos.col);
-                    if (distance === 1) {
+                    const target = gameState.players[targetId];
+                    const distance = Math.abs(bot.position.row - target.position.row) + Math.abs(bot.position.col - target.position.col);
+
+                    // **การแก้ไข: เพิ่มการตรวจสอบกำแพง**
+                    if (distance === 1 && !isWallBetween(bot.position, target.position)) {
                         executeAttack(botId, targetId, rangedWeapons[0]);
                         actionTaken = true;
                         break;
@@ -455,84 +494,12 @@ async function runBotTurn(botId) {
     nextTurn();
 }
 
-// **การแก้ไขที่ 1: ยกเครื่อง initiateBattleStage ให้เป็น "สวิตช์"**
 function initiateBattleStage(initiatorId, defenderId) {
-    console.log(`%c⚔️ BATTLE STAGE started between ${initiatorId} and ${defenderId}`, 'color: orange; font-weight: bold;');
+    addLogMessage(`⚔️ ${gameState.players[initiatorId].name} เข้าปะทะกับ ${gameState.players[defenderId].name}!`);
     battleState = { isActive: true, participants: [initiatorId, defenderId], log: [] };
     document.querySelectorAll('#ui-panel button').forEach(btn => btn.disabled = true);
-    
     const isBotVsBot = initiatorId !== HUMAN_PLAYER_ID && defenderId !== HUMAN_PLAYER_ID;
-
-    if (isBotVsBot) {
-        runAutomatedBattle(initiatorId, defenderId);
-    } else {
-        runInteractiveBattle(initiatorId, defenderId);
-    }
-}
-
-// **การแก้ไขที่ 2: สร้างฟังก์ชันใหม่สำหรับ Bot vs Bot**
-async function runAutomatedBattle(p1Id, p2Id) {
-    battleModal.classList.remove('modal-hidden');
-    battleModal.classList.add('modal-visible');
-    attackerControls.style.display = 'none';
-    defenderControls.style.display = 'none';
-    updateBattleLog(`การต่อสู้ระหว่าง ${gameState.players[p1Id].name} และ ${gameState.players[p2Id].name} เริ่มขึ้นแล้ว!`);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    let attackerId, defenderId;
-    if (Math.random() >= 0.5) { [attackerId, defenderId] = [p1Id, p2Id]; }
-    else { [attackerId, defenderId] = [p2Id, p1Id]; }
-    while (gameState.players[attackerId].status === 'active' && gameState.players[defenderId].status === 'active') {
-        const attacker = gameState.players[attackerId];
-        const defender = gameState.players[defenderId];
-        const weapons = attacker.inventory.filter(item => item.type.includes('Weapon'));
-        const weapon = weapons.length > 0 ? weapons[0] : { name: 'หมัด', damage: 1 };
-        const attackRoll = Math.floor(Math.random() * 6) + 1;
-        let damage = (attackRoll === 6) ? weapon.damage * 2 : weapon.damage;
-        updateBattleLog(`${attacker.name} ใช้ ${weapon.name} และทอยได้ ${attackRoll}.`);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        let choice = (defender.hp < 7) ? 'escape' : 'defend';
-        const defendRoll = Math.floor(Math.random() * 6) + 1;
-        if (choice === 'escape') {
-            updateBattleLog(`${defender.name} พยายามหนี และทอยได้ ${defendRoll}.`);
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            if (defendRoll === 6) {
-                updateBattleLog("หนีสำเร็จ!");
-                endBattle(defenderId, 'escaped');
-                return;
-            } else {
-                updateBattleLog("หนีล้มเหลว!");
-            }
-        } else {
-            updateBattleLog(`${defender.name} เลือกป้องกัน และทอยได้ ${defendRoll}.`);
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            if (defendRoll === 6) {
-                damage = 0; updateBattleLog("Perfect Dodge! ไม่ได้รับความเสียหาย!");
-            } else if (defendRoll > attackRoll) {
-                damage = Math.ceil(damage / 2); updateBattleLog(`ป้องกันสำเร็จ! ลดความเสียหายเหลือ ${damage} ดาเมจ.`);
-            } else {
-                updateBattleLog("ป้องกันล้มเหลว!");
-            }
-        }
-        defender.hp -= damage;
-        if (defender.hp < 0) defender.hp = 0;
-        updateBattleLog(`${defender.name} ได้รับ ${damage} ดาเมจ. HP เหลือ ${defender.hp}`);
-        redrawScreen();
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        if (defender.hp <= 0) {
-            defender.status = 'dead';
-            updateBattleLog(`${defender.name} พ่ายแพ้แล้ว!`);
-            break;
-        }
-        [attackerId, defenderId] = [defenderId, attackerId];
-        updateBattleLog("--- สลับบทบาท ---");
-        await new Promise(resolve => setTimeout(resolve, 1500));
-    }
-    const winnerId = (gameState.players[p1Id].status === 'active') ? p1Id : p2Id;
-    endBattle(winnerId, 'won');
-}
-
-// **การแก้ไขที่ 3: เปลี่ยนชื่อฟังก์ชันเดิมเป็น Interactive**
-function runInteractiveBattle(initiatorId, defenderId) {
+    skipBattleBtn.style.display = isBotVsBot ? 'block' : 'none';
     battleModal.classList.remove('modal-hidden');
     battleModal.classList.add('modal-visible');
     updateBattleLog("กำลังทอยเต๋าตัดสินผู้เริ่มโจมตี...");
@@ -552,25 +519,18 @@ function runInteractiveBattle(initiatorId, defenderId) {
     }, 1500);
 }
 
-// **การแก้ไขที่ 2: เพิ่มการโจมตีด้วยหมัดเมื่อไม่มีอาวุธ**
 function runBattleRound() {
     battleState.attackerRoll = null;
     battleState.defenderRoll = null;
     battleState.defenderChoice = null;
     const attacker = gameState.players[battleState.currentAttacker];
-    const defender = gameState.players[battleState.currentDefender];
-    
-    // **การแก้ไข: เช็คว่าเป็นตาบอทหรือผู้เล่น**
     if (battleState.currentAttacker !== HUMAN_PLAYER_ID) {
-        // ถ้าเป็นตาบอทโจมตี
         attackerControls.style.display = 'none';
         defenderControls.style.display = 'none';
-        
         const weapons = attacker.inventory.filter(item => item.type.includes('Weapon'));
         const weapon = weapons.length > 0 ? weapons[0] : { name: 'หมัด', damage: 1 };
-        handleBattleAttack(weapon); // เรียกโจมตีทันที
+        setTimeout(() => handleBattleAttack(weapon), 1000);
     } else {
-        // ถ้าเป็นตาผู้เล่นโจมตี
         attackerName.textContent = attacker.name;
         defenderControls.style.display = 'none';
         attackerControls.style.display = 'block';
@@ -593,8 +553,7 @@ function runBattleRound() {
 }
 
 function handleBattleAttack(weapon) {
-    if(battleState.currentAttacker !== HUMAN_PLAYER_ID) {
-        // ซ่อน UI ผู้เล่น ถ้าบอทกำลังโจมตี
+    if (battleState.currentAttacker === HUMAN_PLAYER_ID) {
         attackerControls.style.display = 'none';
     }
     const roll = Math.floor(Math.random() * 6) + 1;
@@ -603,20 +562,15 @@ function handleBattleAttack(weapon) {
     let damage = weapon.damage || 1;
     let message = `${gameState.players[battleState.currentAttacker].name} ใช้ ${weapon.name} และทอยได้ ${roll}.`;
     if (roll === 6) {
-        damage *= 2;
-        message += " Critical Hit! สร้างความเสียหาย 2 เท่า!";
+        damage *= 2; message += " Critical Hit! สร้างความเสียหาย 2 เท่า!";
     }
     battleState.potentialDamage = damage;
     updateBattleLog(message);
-    
-    // **การแก้ไข: เช็คว่าเป็นตาบอทหรือผู้เล่น**
-    if(battleState.currentDefender !== HUMAN_PLAYER_ID) {
-        // ถ้าบอทเป็นฝ่ายป้องกัน ให้มันตัดสินใจเอง
+    if (battleState.currentDefender !== HUMAN_PLAYER_ID) {
         defenderControls.style.display = 'none';
         const choice = (gameState.players[battleState.currentDefender].hp < 7) ? 'escape' : 'defend';
-        setTimeout(() => handleDefenderChoice(choice), 1500); // หน่วงเวลาให้ดูเหมือนคิด
+        setTimeout(() => handleDefenderChoice(choice), 1500);
     } else {
-        // ถ้าผู้เล่นเป็นฝ่ายป้องกัน ให้แสดงปุ่ม
         defenderName.textContent = gameState.players[battleState.currentDefender].name;
         defenderControls.style.display = 'block';
     }
@@ -626,51 +580,43 @@ defendBtn.onclick = () => handleDefenderChoice('defend');
 escapeBtn.onclick = () => handleDefenderChoice('escape');
 
 function handleDefenderChoice(choice) {
-    defenderControls.style.display = 'none';
-    battleState.defenderChoice = choice;
-
+    if (battleState.currentDefender === HUMAN_PLAYER_ID) {
+        defenderControls.style.display = 'none';
+    }
     const roll = Math.floor(Math.random() * 6) + 1;
     battleState.defenderRoll = roll;
     let finalDamage = battleState.potentialDamage;
     let message = "";
-
     if (choice === 'defend') {
         message = `${gameState.players[battleState.currentDefender].name} เลือกป้องกัน และทอยได้ ${roll}.`;
-        if (roll === 6) {
-            finalDamage = 0;
-            message += " Perfect Dodge! ไม่ได้รับความเสียหาย!";
-        } else if (roll > battleState.attackerRoll) {
-            finalDamage = Math.ceil(finalDamage / 2);
-            message += ` ป้องกันสำเร็จ! ลดความเสียหายลงครึ่งหนึ่ง เหลือ ${finalDamage} ดาเมจ.`;
-        } else {
-            message += ` ป้องกันล้มเหลว! ได้รับ ${finalDamage} ดาเมจ.`;
-        }
-    } else { // choice === 'escape'
+        if (roll === 6) { finalDamage = 0; message += " Perfect Dodge! ไม่ได้รับความเสียหาย!"; }
+        else if (roll > battleState.attackerRoll) { finalDamage = Math.ceil(finalDamage / 2); message += ` ป้องกันสำเร็จ! ลดความเสียหายลงครึ่งหนึ่ง เหลือ ${finalDamage} ดาเมจ.`; }
+        else { message += ` ป้องกันล้มเหลว! ได้รับ ${finalDamage} ดาเมจ.`; }
+    } else {
         message = `${gameState.players[battleState.currentDefender].name} พยายามหนี และทอยได้ ${roll}.`;
-        if (roll === 6) {
-            message += " หนีสำเร็จ!";
-            updateBattleLog(message);
-            endBattle(battleState.currentDefender, 'escaped'); // จบการต่อสู้ ผู้ป้องกันหนี
-            return;
-        } else {
-            message += ` หนีล้มเหลว! ได้รับ ${finalDamage} ดาเมจ.`;
-        }
+        if (roll === 6) { message += " หนีสำเร็จ!"; updateBattleLog(message); endBattle(battleState.currentDefender, 'escaped'); return; }
+        else { message += ` หนีล้มเหลว! ได้รับ ${finalDamage} ดาเมจ.`; }
+    }
+    const defender = gameState.players[battleState.currentDefender];
+    defender.hp -= finalDamage;
+    if (defender.hp < 0) defender.hp = 0;
+    
+    if (battleState.currentDefender === HUMAN_PLAYER_ID && finalDamage > 0) {
+        showDamagePopup(gameState.players[battleState.currentAttacker].name, finalDamage);
     }
     
-    // คำนวณความเสียหาย
-    gameState.players[battleState.currentDefender].hp -= finalDamage;
     updateBattleLog(message);
     redrawScreen();
-
-    // เช็คว่ามีคนตายหรือไม่
-    if (gameState.players[battleState.currentDefender].hp <= 0) {
-        gameState.players[battleState.currentDefender].status = 'dead';
-        updateBattleLog(`${gameState.players[battleState.currentDefender].name} พ่ายแพ้แล้ว!`);
-        endBattle(battleState.currentAttacker, 'won'); // จบการต่อสู้ ผู้โจมตีชนะ
+    if (defender.hp <= 0) {
+        defender.status = 'dead';
+        addLogMessage(`☠️ ${defender.name} พ่ายแพ้แล้ว!`);
+        updateBattleLog(`${defender.name} พ่ายแพ้แล้ว!`);
+        if (battleState.currentDefender === HUMAN_PLAYER_ID) {
+            setTimeout(gameOver, 1500);
+        }
+        endBattle(battleState.currentAttacker, 'won');
         return;
     }
-
-    // ถ้ายังไม่มีใครตาย ให้สลับบทบาท
     setTimeout(() => {
         [battleState.currentAttacker, battleState.currentDefender] = [battleState.currentDefender, battleState.currentAttacker];
         updateBattleLog("สลับบทบาท!");
@@ -703,9 +649,11 @@ function endBattle(winnerId, reason) {
                     }
                 }
             }
+            addLogMessage(`🏃 ${escaper.name} หนีออกจากการต่อสู้สำเร็จ!`);
+        } else {
+             addLogMessage(`🏆 ${gameState.players[winnerId].name} ชนะการต่อสู้!`);
         }
         redrawScreen();
-        // **การแก้ไข: เช็คว่าผู้เล่นตายหรือยัง ก่อนเริ่มเทิร์นต่อไป**
         if (gameState.players[HUMAN_PLAYER_ID].status === 'active') {
             setTimeout(nextTurn, 500);
         }
@@ -714,10 +662,30 @@ function endBattle(winnerId, reason) {
 
 function updateBattleLog(message) {
     battleState.log.push(message);
-    battleLog.innerHTML = `<p>${battleState.log.slice(-3).join('</p><p>')}</p>`; // แสดงแค่ 3 ข้อความล่าสุด
+    battleLog.innerHTML = `<p>${battleState.log.slice(-3).join('</p><p>')}</p>`;
 }
 
-// --- 6. การเริ่มต้นเกมและสุ่มกระดาน ---
+function simulateBattleOutcome() {
+    let [p1Id, p2Id] = battleState.participants;
+    let p1 = gameState.players[p1Id];
+    let p2 = gameState.players[p2Id];
+
+    while(p1.status === 'active' && p2.status === 'active') {
+        const weapons1 = p1.inventory.filter(item => item.type.includes('Weapon'));
+        const weapon1 = weapons1.length > 0 ? weapons1[0] : { name: 'หมัด', damage: 1 };
+        p2.hp -= weapon1.damage;
+        if (p2.hp <= 0) { p2.status = 'dead'; p2.hp = 0; addLogMessage(`☠️ ${p2.name} พ่ายแพ้แล้ว!`); break; }
+
+        const weapons2 = p2.inventory.filter(item => item.type.includes('Weapon'));
+        const weapon2 = weapons2.length > 0 ? weapons2[0] : { name: 'หมัด', damage: 1 };
+        p1.hp -= weapon2.damage;
+        if (p1.hp <= 0) { p1.status = 'dead'; p1.hp = 0; addLogMessage(`☠️ ${p1.name} พ่ายแพ้แล้ว!`); break; }
+    }
+    
+    const winnerId = p1.status === 'active' ? p1Id : p2Id;
+    updateBattleLog(`${gameState.players[winnerId].name} เป็นผู้ชนะในการต่อสู้แบบรวบรัด!`);
+    endBattle(winnerId, 'won');
+}
 function generateRandomWalls(wallCount = 15) {
     const newWalls = {};
     const potentialWalls = [];
@@ -808,6 +776,7 @@ function initializeGame(botCount) {
     document.querySelectorAll('#ui-panel button').forEach(btn => btn.disabled = false);
     startScreen.style.display = 'none';
     gameContainer.style.display = 'flex';
+    addLogMessage("------ <strong>เกมเริ่มต้น!</strong> ------");
     redrawScreen();
     nextTurn();
 }
@@ -828,9 +797,6 @@ closeAttackModalBtn.addEventListener('click', () => {
     attackModal.classList.remove('modal-visible');
     attackModal.classList.add('modal-hidden');
 });
-restartBtn.addEventListener('click', () => {
-    window.location.reload();
-});
-winRestartBtn.addEventListener('click', () => {
-    window.location.reload();
-});
+restartBtn.addEventListener('click', () => { window.location.reload(); });
+winRestartBtn.addEventListener('click', () => { window.location.reload(); });
+skipBattleBtn.addEventListener('click', simulateBattleOutcome);
