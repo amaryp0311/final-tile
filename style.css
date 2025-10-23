@@ -272,3 +272,55 @@ button {
     padding: 10px 15px;
     margin: 5px;
 }
+
+/* --- เพิ่มโค้ดนี้ท้ายไฟล์ style.css --- */
+
+/* สไตล์สำหรับ Game Log */
+#game-log-container {
+    height: 250px; /* จำกัดความสูง */
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 10px;
+    overflow-y: auto; /* ทำให้ scroll ได้เมื่อข้อความล้น */
+}
+
+#game-log {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+    font-size: 14px;
+}
+
+#game-log li {
+    padding: 4px 0;
+    border-bottom: 1px solid #eee;
+}
+
+/* สไตล์สำหรับ Damage Pop-up */
+.popup-hidden {
+    display: none;
+}
+
+#damage-popup {
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(217, 83, 79, 0.9); /* สีแดง แจ้งเตือน */
+    color: white;
+    padding: 20px 40px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    z-index: 200;
+    text-align: center;
+    font-size: 1.5em;
+    font-weight: bold;
+    /* Animation */
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+
+#damage-popup.show {
+    opacity: 1;
+}
