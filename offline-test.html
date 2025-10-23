@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offline Game Test</title>
+    <title>Final Tile - Offline Test</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -42,6 +42,11 @@
             </div>
             <button id="search-btn">🔍 ค้นหา</button>
             <button id="inventory-btn">🎒 เปิดคลัง</button>
+            <hr>
+            <h2>Game Log</h2>
+            <div id="game-log-container">
+                <ol id="game-log"></ol>
+            </div>
         </div>
     </div>
 
@@ -86,17 +91,20 @@
     <div id="battle-modal" class="modal-hidden">
         <div class="modal-content">
             <h2 id="battle-title">⚔️ BATTLE STAGE ⚔️</h2>
+            <button id="skip-battle-btn" style="display: none;">⏩ Skip Battle</button>
             <div id="battle-log">
                 <p>กำลังตัดสินผู้เริ่มโจมตีก่อน...</p>
             </div>
             <hr>
             <div id="attacker-controls" style="display: none;">
                 <h3>ตาของ: <span id="attacker-name"></span> (ผู้โจมตี)</h3>
+                <button onclick="toggleInventoryBattle()">🎒 เปิดคลัง</button>
                 <p>เลือกอาวุธเพื่อโจมตี:</p>
                 <div id="battle-weapon-list"></div>
             </div>
             <div id="defender-controls" style="display: none;">
                 <h3>ตาของ: <span id="defender-name"></span> (ผู้ป้องกัน)</h3>
+                <button onclick="toggleInventoryBattle()">🎒 เปิดคลัง</button>
                 <p>เลือกการกระทำ:</p>
                 <button id="defend-btn">ป้องกัน</button>
                 <button id="escape-btn">พยายามหนี</button>
@@ -104,7 +112,11 @@
         </div>
     </div>
 
+    <div id="damage-popup" class="popup-hidden">
+        <p><span id="popup-attacker-name">???</span> โจมตีคุณ!</p>
+        <p>ได้รับ <span id="popup-damage-amount">X</span> ดาเมจ</p>
+    </div>
+
     <script src="offline-game.js"></script>
 </body>
 </html>
-
